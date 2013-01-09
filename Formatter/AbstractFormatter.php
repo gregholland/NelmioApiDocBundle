@@ -36,6 +36,16 @@ abstract class AbstractFormatter implements FormatterInterface
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function selfFormat(array $collection)
+    {
+        return $this->selfRender(
+            $this->processCollection($collection)
+        );
+    }
+
+    /**
      * Format a single array of data
      *
      * @param  array        $data
