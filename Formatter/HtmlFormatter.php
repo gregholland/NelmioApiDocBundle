@@ -147,6 +147,21 @@ class HtmlFormatter extends AbstractFormatter
     }
 
     /**
+     * {@inheritdoc}
+     */
+    protected function selfRender(array $collection)
+    {
+
+        return array_merge(
+            array(
+                'resources' => $collection
+            ),
+            $this->getGlobalVars()
+        );
+
+    }
+
+    /**
      * @return array
      */
     private function getGlobalVars()
