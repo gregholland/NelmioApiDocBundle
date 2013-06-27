@@ -14,6 +14,7 @@ namespace Nelmio\ApiDocBundle\Tests;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase as BaseWebTestCase;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\Kernel;
+use Symfony\Component\DependencyInjection\Scope;
 
 abstract class WebTestCase extends BaseWebTestCase
 {
@@ -25,6 +26,15 @@ abstract class WebTestCase extends BaseWebTestCase
 
         $fs = new Filesystem();
         $fs->remove($dir);
+    }
+
+    public static function handleDeprecation($errorNumber, $message, $file, $line, $context)
+    {
+        if ($errorNumber & E_USER_DEPRECATED) {
+            return true;
+        }
+
+        return \PHPUnit_Util_ErrorHandler::handleError($errorNumber, $message, $file, $line);
     }
 
     protected function getContainer(array $options = array())

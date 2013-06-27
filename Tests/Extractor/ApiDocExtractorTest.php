@@ -15,14 +15,18 @@ use Nelmio\ApiDocBundle\Tests\WebTestCase;
 
 class ApiDocExtractorTest extends WebTestCase
 {
+    const ROUTES_QUANTITY = 20;
+
     public function testAll()
     {
         $container = $this->getContainer();
         $extractor = $container->get('nelmio_api_doc.extractor.api_doc_extractor');
+        set_error_handler(array($this, 'handleDeprecation'));
         $data = $extractor->all();
+        restore_error_handler();
 
         $this->assertTrue(is_array($data));
-        $this->assertCount(14, $data);
+        $this->assertCount(self::ROUTES_QUANTITY, $data);
 
         foreach ($data as $d) {
             $this->assertTrue(is_array($d));
@@ -62,7 +66,7 @@ class ApiDocExtractorTest extends WebTestCase
         $this->assertFalse(isset($array2['filters']));
         $this->assertEquals('Nelmio\ApiDocBundle\Tests\Fixtures\Form\TestType', $a2->getInput());
 
-        $a3 = $data['10']['annotation'];
+        $a3 = $data['13']['annotation'];
         $this->assertTrue($a3->getHttps());
     }
 
@@ -150,6 +154,57 @@ class ApiDocExtractorTest extends WebTestCase
         $this->assertEquals(
             "This method is useful to test if the getDocComment works.",
             $annotation->getDescription()
+        );
+
+        $data = $annotation->toArray();
+        $this->assertEquals(
+            4,
+            count($data['requirements'])
+        );
+        $this->assertEquals(
+            'The param type',
+            $data['requirements']['paramType']['description']
+        );
+        $this->assertEquals(
+            'The param id',
+            $data['requirements']['param']['description']
+        );
+    }
+
+    public function testGetWithAuthentication()
+    {
+        $container  = $this->getContainer();
+        $extractor  = $container->get('nelmio_api_doc.extractor.api_doc_extractor');
+        $annotation = $extractor->get('Nelmio\ApiDocBundle\Tests\Fixtures\Controller\TestController::AuthenticatedAction', 'test_route_13');
+
+        $this->assertNotNull($annotation);
+        $this->assertTrue(
+            $annotation->getAuthentication()
+        );
+    }
+
+    public function testGetWithCache()
+    {
+        $container  = $this->getContainer();
+        $extractor  = $container->get('nelmio_api_doc.extractor.api_doc_extractor');
+        $annotation = $extractor->get('Nelmio\ApiDocBundle\Tests\Fixtures\Controller\TestController::CachedAction', 'test_route_14');
+
+        $this->assertNotNull($annotation);
+        $this->assertEquals(
+            60,
+            $annotation->getCache()
+        );
+    }
+
+    public function testGetWithDeprecated()
+    {
+        $container  = $this->getContainer();
+        $extractor  = $container->get('nelmio_api_doc.extractor.api_doc_extractor');
+        $annotation = $extractor->get('Nelmio\ApiDocBundle\Tests\Fixtures\Controller\TestController::DeprecatedAction', 'test_route_14');
+
+        $this->assertNotNull($annotation);
+        $this->assertTrue(
+            $annotation->getDeprecated()
         );
     }
 }

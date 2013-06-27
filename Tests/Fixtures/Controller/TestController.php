@@ -15,6 +15,7 @@ use FOS\RestBundle\Controller\Annotations\QueryParam;
 use FOS\RestBundle\Controller\Annotations\RequestParam;
 use Nelmio\ApiDocBundle\Annotation\ApiDoc;
 use Symfony\Component\HttpFoundation\Response;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Cache;
 
 class TestController
 {
@@ -43,6 +44,16 @@ class TestController
     {
     }
 
+    /**
+     * @ApiDoc(
+     *     description="post test 2",
+     *     resource=true
+     * )
+     */
+    public function postTest2Action()
+    {
+    }
+
     public function anotherAction()
     {
     }
@@ -62,6 +73,8 @@ class TestController
      *
      * @param int $id   A nice comment
      * @param int $page
+     * @param int $paramType The param type
+     * @param int $param The param id
      */
     public function myCommentedAction()
     {
@@ -86,9 +99,25 @@ class TestController
 
     /**
      * @ApiDoc()
+     * @QueryParam(strict=true, name="page", requirements="\d+", description="Page of the overview.")
+     */
+    public function zActionWithQueryParamStrictAction()
+    {
+    }
+
+    /**
+     * @ApiDoc()
      * @QueryParam(name="page", requirements="\d+", default="1", description="Page of the overview.")
      */
     public function zActionWithQueryParamAction()
+    {
+    }
+
+    /**
+     * @ApiDoc()
+     * @QueryParam(name="page", requirements="\d+", description="Page of the overview.")
+     */
+    public function zActionWithQueryParamNoDefaultAction()
     {
     }
 
@@ -114,7 +143,7 @@ class TestController
 
     /**
      * @ApiDoc()
-     * @RequestParam(name="param1", requirements="string", nullable=false, description="Param1 description.")
+     * @RequestParam(name="param1", requirements="string", description="Param1 description.")
      */
     public function zActionWithRequestParamAction()
     {
@@ -127,4 +156,37 @@ class TestController
     {
     }
 
+    /**
+     * @ApiDoc(
+     *  authentication=true
+     * )
+     */
+    public function authenticatedAction()
+    {
+    }
+
+    /**
+     * @ApiDoc()
+     * @Cache(maxage=60, public=1)
+     */
+    public function cachedAction()
+    {
+    }
+
+    /**
+     * @ApiDoc()
+     * @deprecated
+     */
+    public function deprecatedAction()
+    {
+    }
+
+    /**
+     * @ApiDoc(
+     *     output="Nelmio\ApiDocBundle\Tests\Fixtures\Model\JmsTest"
+     * )
+     */
+    public function jmsReturnNestedOutputAction()
+    {
+    }
 }

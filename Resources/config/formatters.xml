@@ -15,7 +15,6 @@
     <services>
         <service id="nelmio_api_doc.parser.form_type_parser" class="%nelmio_api_doc.parser.form_type_parser.class%">
             <argument type="service" id="form.factory" />
-            <argument type="service" id="form.registry" />
             <tag name="nelmio_api_doc.extractor.parser" />
         </service>
         <service id="nelmio_api_doc.formatter.abstract_formatter" class="%nelmio_api_doc.formatter.abstract_formatter.class%" />
@@ -27,6 +26,9 @@
             parent="nelmio_api_doc.formatter.abstract_formatter">
             <call method="setTemplatingEngine">
                 <argument type="service" id="templating" />
+            </call>
+            <call method="setMotdTemplate">
+                <argument>%nelmio_api_doc.motd.template%</argument>
             </call>
             <call method="setApiName">
                 <argument>%nelmio_api_doc.api_name%</argument>
@@ -45,6 +47,9 @@
             </call>
             <call method="setAcceptType">
                 <argument>%nelmio_api_doc.sandbox.accept_type%</argument>
+            </call>
+            <call method="setBodyFormat">
+                <argument>%nelmio_api_doc.sandbox.body_format%</argument>
             </call>
             <call method="setAuthentication">
                 <argument>%nelmio_api_doc.sandbox.authentication%</argument>

@@ -20,6 +20,11 @@ class MarkdownFormatter extends AbstractFormatter
     {
         $markdown = sprintf("### `%s` %s ###\n", $data['method'], $data['uri']);
 
+        if(isset($data['deprecated']) && false !== $data['deprecated']) {
+            $markdown .= "### This method is deprecated ###";
+            $markdown .= "\n\n";
+        }
+
         if (isset($data['description'])) {
             $markdown .= sprintf("\n_%s_", $data['description']);
         }
@@ -98,6 +103,20 @@ class MarkdownFormatter extends AbstractFormatter
                     $markdown .= sprintf("  * description: %s\n", $parameter['description']);
                 }
 
+                if (null !== $parameter['sinceVersion'] || null !== $parameter['untilVersion']) {
+                    $markdown .= "  * versions: ";
+                    if ($parameter['sinceVersion']) {
+                        $markdown .= '>='.$parameter['sinceVersion'];
+                    }
+                    if ($parameter['untilVersion']) {
+                        if ($parameter['sinceVersion']) {
+                            $markdown .= ',';
+                        }
+                        $markdown .= '<='.$parameter['untilVersion'];
+                    }
+                    $markdown .= "\n";
+                }
+
                 $markdown .= "\n";
             }
         }
@@ -111,21 +130,33 @@ class MarkdownFormatter extends AbstractFormatter
     protected function render(array $collection)
     {
         $markdown = '';
-        foreach ($collection as $resource => $arrayOfData) {
-            $markdown .= $this->renderResourceSection($resource, $arrayOfData);
+        foreach ($collection as $section => $resources) {
+            $markdown .= $this->renderResourceSection($section, $resources);
             $markdown .= "\n";
         }
 
         return trim($markdown);
     }
 
-    private function renderResourceSection($resource, array $arrayOfData)
+    private function renderResourceSection($section, array $resources)
     {
-        $markdown = sprintf("# %s #\n\n", $resource);
+        if ('_others' !== $section) {
+            $markdown = sprintf("# %s #\n\n", $section);
+        } else {
+            $markdown = '';
+        }
 
-        foreach ($arrayOfData as $data) {
-            $markdown .= $this->renderOne($data);
-            $markdown .= "\n";
+        foreach ($resources as $resource => $methods) {
+            if ('_others' === $section && 'others' !== $resource) {
+                $markdown .= sprintf("## %s ##\n\n", $resource);
+            } elseif ('others' !== $resource) {
+                $markdown .= sprintf("## %s ##\n\n", $resource);
+            }
+
+            foreach ($methods as $method) {
+                $markdown .= $this->renderOne($method);
+                $markdown .= "\n";
+            }
         }
 
         return $markdown;

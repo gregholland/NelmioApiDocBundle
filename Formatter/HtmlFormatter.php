@@ -51,9 +51,19 @@ class HtmlFormatter extends AbstractFormatter
     private $acceptType;
 
     /**
+     * @var string
+     */
+    private $bodyFormat;
+
+    /**
      * @var array
      */
     private $authentication;
+
+    /**
+     * @var string
+     */
+    private $motdTemplate;
 
     /**
      * @param array $authentication
@@ -104,6 +114,14 @@ class HtmlFormatter extends AbstractFormatter
     }
 
     /**
+     * @param string $bodyFormat
+     */
+    public function setBodyFormat($bodyFormat)
+    {
+        $this->bodyFormat = $bodyFormat;
+    }
+
+    /**
      * @param string $method
      */
     public function setRequestFormatMethod($method)
@@ -117,6 +135,22 @@ class HtmlFormatter extends AbstractFormatter
     public function setDefaultRequestFormat($format)
     {
         $this->defaultRequestFormat = $format;
+    }
+
+    /**
+     * @param string $motdTemplate
+     */
+    public function setMotdTemplate($motdTemplate)
+    {
+        $this->motdTemplate = $motdTemplate;
+    }
+
+    /**
+     * @return string
+     */
+    public function getMotdTemplate()
+    {
+        return $this->motdTemplate;
     }
 
     /**
@@ -173,10 +207,12 @@ class HtmlFormatter extends AbstractFormatter
             'enableSandbox'        => $this->enableSandbox,
             'requestFormatMethod'  => $this->requestFormatMethod,
             'acceptType'           => $this->acceptType,
+            'bodyFormat'           => $this->bodyFormat,
             'defaultRequestFormat' => $this->defaultRequestFormat,
             'date'                 => date(DATE_RFC822),
             'css'                  => file_get_contents(__DIR__ . '/../Resources/public/css/screen.css'),
             'js'                   => file_get_contents(__DIR__ . '/../Resources/public/js/all.js'),
+            'motdTemplate'         => $this->motdTemplate
         );
     }
 }

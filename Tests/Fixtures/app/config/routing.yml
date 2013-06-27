@@ -6,6 +6,7 @@ test_route_1:
 
 test_route_2:
     pattern:  /tests.{_format}
+    host:     api.test.dev
     defaults: { _controller: NelmioApiDocTestBundle:Test:postTest, _format: json }
     requirements:
         _method: POST
@@ -19,7 +20,7 @@ test_route_4:
     defaults: { _controller: NelmioApiDocTestBundle:Test:any, _format: json }
 
 test_route_5:
-    pattern:  /my-commented/{id}/{page}
+    pattern:  /my-commented/{id}/{page}/{paramType}/{param}
     defaults: { _controller: NelmioApiDocTestBundle:Test:myCommented }
 
 test_route_6:
@@ -64,6 +65,10 @@ test_route_12:
     requirements:
         _scheme: https
 
+test_route_13:
+    pattern: /authenticated
+    defaults: { _controller: NelmioApiDocTestBundle:Test:authenticated }
+
 test_service_route_1:
     pattern:  /tests.{_format}
     defaults: { _controller: nemlio.test.controller:indexAction, _format: json }
@@ -72,6 +77,7 @@ test_service_route_1:
 
 test_service_route_2:
     pattern:  /tests.{_format}
+    host:     api.test.dev
     defaults: { _controller: nemlio.test.controller:postTestAction, _format: json }
     requirements:
         _method: POST
@@ -87,3 +93,31 @@ test_service_route_4:
 NelmioApiDocBundle:
     resource: "@NelmioApiDocBundle/Resources/config/routing.yml"
     prefix:   /
+
+test_route_14:
+    pattern:  /tests2.{_format}
+    defaults: { _controller: NelmioApiDocTestBundle:Test:postTest2, _format: json }
+    requirements:
+        _method: POST
+
+test_route_15:
+    pattern:  /z-action-with-query-param-strict
+    defaults: { _controller: NelmioApiDocTestBundle:Test:zActionWithQueryParamStrict }
+    requirements:
+        _method: GET
+
+test_route_16:
+    pattern:  /z-action-with-query-param-no-default
+    defaults: { _controller: NelmioApiDocTestBundle:Test:zActionWithQueryParamNoDefault }
+    requirements:
+        _method: GET
+
+test_route_17:
+    pattern:  /z-action-with-deprecated-indicator
+    defaults: { _controller: NelmioApiDocTestBundle:Test:deprecated }
+    requirements:
+        _method: GET
+
+test_return_nested_output:
+    pattern: /return-nested-output
+    defaults: { _controller: NelmioApiDocTestBundle:Test:jmsReturnNestedOutput, _format: json }

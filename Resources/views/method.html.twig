@@ -1,15 +1,28 @@
 <li class="{{ data.method|lower }} operation">
-    <div class="heading toggler">
+    <div class="heading toggler{% if data.deprecated %} deprecated{% endif %}">
     <h3>
         <span class="http_method">
             <a>{{ data.method|upper }}</a>
         </span>
 
+        {% if data.deprecated %}
+        <span class="deprecated">
+            <a>DEPRECATED</a>
+        </span>
+        {% endif %}
+
         {% if data.https %}
-            <img src="{{ asset('bundles/nelmioapidoc/image/lock.png') }}" class="padlock" />
+            <span class="icon lock" title="HTTPS"></span>
+        {% endif %}
+        {% if data.authentication %}
+            <span class="icon keys" title="Needs authentication"></span>
         {% endif %}
 
         <span class="path">
+            {% if data.host is defined -%}
+                {{ data.https ? 'https://' : 'http://' -}}
+                {{ data.host -}}
+            {% endif -%}
             {{ data.uri }}
         </span>
     </h3>
@@ -20,7 +33,7 @@
     </ul>
     </div>
 
-    <div class="content" style="display: {% if displayContent  is defined and displayContent == true %}display{% else %}none{% endif %};">
+    <div class="content" style="display: {% if displayContent is defined and displayContent == true %}display{% else %}none{% endif %};">
         <ul class="tabs">
             <li class="selected" data-pane="content">Documentation</li>
             {% if enableSandbox %}
@@ -121,6 +134,7 @@
                         <tr>
                             <th>Parameter</th>
                             <th>Type</th>
+                            <th>Versions</th>
                             <th>Description</th>
                         </tr>
                     </thead>
@@ -129,6 +143,7 @@
                             <tr>
                                 <td>{{ name }}</td>
                                 <td>{{ infos.dataType }}</td>
+                                <td>{% include 'NelmioApiDocBundle:Components:version.html.twig' with {'sinceVersion': infos.sinceVersion, 'untilVersion': infos.untilVersion} only %}</td>
                                 <td>{{ infos.description }}</td>
                             </tr>
                         {% endfor %}
@@ -136,24 +151,35 @@
                 </table>
             {% endif %}
 
-             {% if data.statusCodes is defined and data.statusCodes is not empty %}
-            <h4>Status Codes</h4>
-            <table class="fullwidth">
-                <thead>
+            {% if data.statusCodes is defined and data.statusCodes is not empty %}
+                <h4>Status Codes</h4>
+                <table class="fullwidth">
+                    <thead>
                     <tr>
                         <th>Status Code</th>
                         <th>Description</th>
                     </tr>
-                </thead>
-                <tbody>
-                    {% for status_code, description in data.statusCodes %}
-                    <tr>
-                        <td><a href="http://en.wikipedia.org/wiki/HTTP_{{ status_code }}" target="_blank">{{ status_code }}<a/></td>
-                        <td>{{ description }}</td>
-                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for status_code, descriptions in data.statusCodes %}
+                        <tr>
+                            <td><a href="http://en.wikipedia.org/wiki/HTTP_{{ status_code }}" target="_blank">{{ status_code }}<a/></td>
+                            <td>
+                                <ul>
+                                    {% for description in descriptions %}
+                                        <li>{{ description }}</li>
+                                    {%  endfor %}
+                                </ul>
+                            </td>
+                        </tr>
                     {% endfor %}
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            {% endif %}
+
+            {% if data.cache is defined and data.cache is not empty %}
+                <h4>Cache</h4>
+                <div>{{ data.cache }}s</div>
             {% endif %}
 
             </div>

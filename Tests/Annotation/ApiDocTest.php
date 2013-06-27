@@ -26,8 +26,10 @@ class ApiDocTest extends TestCase
         $this->assertTrue(is_array($array));
         $this->assertFalse(isset($array['filters']));
         $this->assertFalse($annot->isResource());
+        $this->assertFalse($annot->getDeprecated());
         $this->assertFalse(isset($array['description']));
         $this->assertNull($annot->getInput());
+        $this->assertFalse($array['authentication']);
     }
 
     public function testConstructWithInvalidData()
@@ -43,6 +45,7 @@ class ApiDocTest extends TestCase
         $this->assertTrue(is_array($array));
         $this->assertFalse(isset($array['filters']));
         $this->assertFalse($annot->isResource());
+        $this->assertFalse($annot->getDeprecated());
         $this->assertFalse(isset($array['description']));
         $this->assertNull($annot->getInput());
     }
@@ -59,6 +62,7 @@ class ApiDocTest extends TestCase
         $this->assertTrue(is_array($array));
         $this->assertFalse(isset($array['filters']));
         $this->assertFalse($annot->isResource());
+        $this->assertFalse($annot->getDeprecated());
         $this->assertEquals($data['description'], $array['description']);
         $this->assertNull($annot->getInput());
     }
@@ -76,6 +80,7 @@ class ApiDocTest extends TestCase
         $this->assertTrue(is_array($array));
         $this->assertFalse(isset($array['filters']));
         $this->assertFalse($annot->isResource());
+        $this->assertFalse($annot->getDeprecated());
         $this->assertEquals($data['description'], $array['description']);
         $this->assertEquals($data['input'], $annot->getInput());
     }
@@ -85,6 +90,7 @@ class ApiDocTest extends TestCase
         $data = array(
             'resource'      => true,
             'description'   => 'Heya',
+            'deprecated'    => true,
             'input'         => 'My\Form\Type',
         );
 
@@ -94,6 +100,7 @@ class ApiDocTest extends TestCase
         $this->assertTrue(is_array($array));
         $this->assertFalse(isset($array['filters']));
         $this->assertTrue($annot->isResource());
+        $this->assertTrue($annot->getDeprecated());
         $this->assertEquals($data['description'], $array['description']);
         $this->assertEquals($data['input'], $annot->getInput());
     }
@@ -103,6 +110,7 @@ class ApiDocTest extends TestCase
         $data = array(
             'resource'      => false,
             'description'   => 'Heya',
+            'deprecated'    => false,
             'input'         => 'My\Form\Type',
         );
 
@@ -113,6 +121,7 @@ class ApiDocTest extends TestCase
         $this->assertFalse(isset($array['filters']));
         $this->assertFalse($annot->isResource());
         $this->assertEquals($data['description'], $array['description']);
+        $this->assertEquals($data['deprecated'], $array['deprecated']);
         $this->assertEquals($data['input'], $annot->getInput());
     }
 
@@ -120,6 +129,7 @@ class ApiDocTest extends TestCase
     {
         $data = array(
             'resource'      => true,
+            'deprecated'    => false,
             'description'   => 'Heya',
             'filters'       => array(
                 array('name' => 'a-filter'),
@@ -135,6 +145,7 @@ class ApiDocTest extends TestCase
         $this->assertEquals(array('a-filter' => array()), $array['filters']);
         $this->assertTrue($annot->isResource());
         $this->assertEquals($data['description'], $array['description']);
+        $this->assertEquals($data['deprecated'], $array['deprecated']);
         $this->assertNull($annot->getInput());
     }
 
@@ -174,13 +185,17 @@ class ApiDocTest extends TestCase
         $this->assertEquals($data['input'], $annot->getInput());
     }
 
-    public function testConstructWithHTTPResponseCodes()
+    public function testConstructWithStatusCodes()
     {
         $data = array(
             'description' => 'Heya',
             'statusCodes' => array(
                 200 => "Returned when successful",
-                403 => "Returned when the user is not authorized"
+                403 => "Returned when the user is not authorized",
+                404 => array(
+                    "Returned when the user is not found",
+                    "Returned when when something else is not found"
+                )
             )
         );
 
@@ -190,7 +205,31 @@ class ApiDocTest extends TestCase
         $this->assertTrue(is_array($array));
         $this->assertTrue(is_array($array['statusCodes']));
         foreach ($data['statusCodes'] as $code => $message) {
-            $this->assertEquals($array['statusCodes'][$code], $message);
+            $this->assertEquals($array['statusCodes'][$code], !is_array($message) ? array($message) : $message);
         }
+    }
+
+    public function testConstructWithAuthentication()
+    {
+        $data = array(
+            'authentication' => true
+        );
+
+        $annot = new ApiDoc($data);
+        $array = $annot->toArray();
+
+        $this->assertTrue($array['authentication']);
+    }
+
+    public function testConstructWithCache()
+    {
+        $data = array(
+            'cache' => '60'
+        );
+
+        $annot = new ApiDoc($data);
+        $array = $annot->toArray();
+
+        $this->assertEquals($data['cache'], $array['cache']);
     }
 }

@@ -11,45 +11,56 @@
 
 namespace Nelmio\ApiDocBundle\Parser;
 
+use JMS\Serializer\Exclusion\GroupsExclusionStrategy;
+use JMS\Serializer\SerializationContext;
 use Metadata\MetadataFactoryInterface;
 use Nelmio\ApiDocBundle\Util\DocCommentExtractor;
-use JMS\SerializerBundle\Metadata\PropertyMetadata;
-use JMS\SerializerBundle\Metadata\VirtualPropertyMetadata;
+use JMS\Serializer\Metadata\PropertyMetadata;
+use JMS\Serializer\Metadata\VirtualPropertyMetadata;
+use JMS\Serializer\Naming\PropertyNamingStrategyInterface;
 
 /**
  * Uses the JMS metadata factory to extract input/output model information
  */
 class JmsMetadataParser implements ParserInterface
 {
-
     /**
      * @var \Metadata\MetadataFactoryInterface
      */
     private $factory;
 
     /**
+     * @var PropertyNamingStrategyInterface
+     */
+    private $namingStrategy;
+
+    /**
      * @var \Nelmio\ApiDocBundle\Util\DocCommentExtractor
      */
     private $commentExtractor;
 
-    private $parsedClasses = array();
-
     /**
      * Constructor, requires JMS Metadata factory
      */
-    public function __construct(MetadataFactoryInterface $factory, DocCommentExtractor $commentExtractor)
-    {
+    public function __construct(
+        MetadataFactoryInterface $factory,
+        PropertyNamingStrategyInterface $namingStrategy,
+        DocCommentExtractor $commentExtractor
+    ) {
         $this->factory = $factory;
+        $this->namingStrategy = $namingStrategy;
         $this->commentExtractor = $commentExtractor;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function supports($input)
+    public function supports(array $input)
     {
+        $className = $input['class'];
+
         try {
-            if ($meta = $this->factory->getMetadataForClass($input)) {
+            if ($meta = $this->factory->getMetadataForClass($className)) {
                 return true;
             }
         } catch (\ReflectionException $e) {
@@ -61,44 +72,72 @@ class JmsMetadataParser implements ParserInterface
     /**
      * {@inheritdoc}
      */
-    public function parse($input)
+    public function parse(array $input)
     {
-        $meta = $this->factory->getMetadataForClass($input);
+        $className = $input['class'];
+        $groups    = $input['groups'];
+
+        return $this->doParse($className, array(), $groups);
+    }
+
+    /**
+     * Recursively parse all metadata for a class
+     *
+     * @param  string                    $className Class to get all metadata for
+     * @param  array                     $visited   Classes we've already visited to prevent infinite recursion.
+     * @param  array                     $groups    Serialization groups to include.
+     * @return array                     metadata for given class
+     * @throws \InvalidArgumentException
+     */
+    protected function doParse($className, $visited = array(), array $groups = array())
+    {
+        $meta = $this->factory->getMetadataForClass($className);
 
         if (null === $meta) {
-            throw new \InvalidArgumentException(sprintf("No metadata found for class %s", $input));
+            throw new \InvalidArgumentException(sprintf("No metadata found for class %s", $className));
         }
+
+        $exclusionStrategies   = array();
+        $exclusionStrategies[] = new GroupsExclusionStrategy($groups);
 
         $params = array();
 
-        //iterate over property metadata
+        // iterate over property metadata
         foreach ($meta->propertyMetadata as $item) {
-
             if (!is_null($item->type)) {
-                $name = isset($item->serializedName) ? $item->serializedName : $item->name;
+                $name = $this->namingStrategy->translateName($item);
 
-                $dataType = $this->processDataType(is_string($item->type) ? $item->type : $item->type['name']);
+                $dataType = $this->processDataType($item);
+
+                // apply exclusion strategies
+                foreach ($exclusionStrategies as $strategy) {
+                    if (true === $strategy->shouldSkipProperty($item, SerializationContext::create())) {
+                        continue 2;
+                    }
+                }
 
                 $params[$name] = array(
-                    'dataType' => $dataType['normalized'],
-                    'required'      => false,   //TODO: can't think of a good way to specify this one, JMS doesn't have a setting for this
-                    'description'   => $this->getDescription($input, $item),
-                    'readonly' => $item->readOnly
+                    'dataType'     => $dataType['normalized'],
+                    'required'     => false,
+                    //TODO: can't think of a good way to specify this one, JMS doesn't have a setting for this
+                    'description'  => $this->getDescription($className, $item),
+                    'readonly'     => $item->readOnly,
+                    'sinceVersion' => $item->sinceVersion,
+                    'untilVersion' => $item->untilVersion,
                 );
 
                 // if class already parsed, continue, to avoid infinite recursion
-                if (in_array($dataType['class'], $this->parsedClasses)) {
+                if (in_array($dataType['class'], $visited)) {
                     continue;
                 }
 
-                //check for nested classes with JMS metadata
+                // check for nested classes with JMS metadata
                 if ($dataType['class'] && null !== $this->factory->getMetadataForClass($dataType['class'])) {
-                    $this->parsedClasses[] = $dataType['class'];
-                    $params[$name]['children'] = $this->parse($dataType['class']);
+                    $visited[]                 = $dataType['class'];
+                    $params[$name]['children'] = $this->doParse($dataType['class'], $visited, $groups);
                 }
             }
         }
-        $this->parsedClasses = array();
 
         return $params;
     }
@@ -107,21 +146,13 @@ class JmsMetadataParser implements ParserInterface
      * Figure out a normalized data type (for documentation), and get a
      * nested class name, if available.
      *
-     * @param  string $type
+     * @param  PropertyMetadata $type
      * @return array
      */
-    protected function processDataType($type)
+    protected function processDataType(PropertyMetadata $item)
     {
-        //could be basic type
-        if ($this->isPrimitive($type)) {
-            return array(
-                'normalized' => $type,
-                'class' => null
-            );
-        }
-
-        //check for a type inside something that could be treated as an array
-        if ($nestedType = $this->getNestedTypeInArray($type)) {
+        // check for a type inside something that could be treated as an array
+        if ($nestedType = $this->getNestedTypeInArray($item)) {
             if ($this->isPrimitive($nestedType)) {
                 return array(
                     'normalized' => sprintf("array of %ss", $nestedType),
@@ -137,7 +168,17 @@ class JmsMetadataParser implements ParserInterface
             );
         }
 
-        //if we got this far, it's a general class name
+        $type = $item->type['name'];
+
+        // could be basic type
+        if ($this->isPrimitive($type)) {
+            return array(
+                'normalized' => $type,
+                'class' => null
+            );
+        }
+
+        // if we got this far, it's a general class name
         $exp = explode("\\", $type);
 
         return array(
@@ -148,22 +189,27 @@ class JmsMetadataParser implements ParserInterface
 
     protected function isPrimitive($type)
     {
-        return in_array($type, array('boolean', 'integer', 'string', 'double', 'array', 'DateTime'));
+        return in_array($type, array('boolean', 'integer', 'string', 'float', 'double', 'array', 'DateTime'));
     }
 
     /**
      * Check the various ways JMS describes values in arrays, and
      * get the value type in the array
      *
-     * @param  string      $type
+     * @param  PropertyMetadata $item
      * @return string|null
      */
-    protected function getNestedTypeInArray($type)
+    protected function getNestedTypeInArray(PropertyMetadata $item)
     {
-        //could be some type of array with <V>, or <K,V>
-        $regEx = "/\<([A-Za-z0-9\\\]*)(\,?\s?(.*))?\>/";
-        if (preg_match($regEx, $type, $matches)) {
-            return (!empty($matches[3])) ? $matches[3] : $matches[1];
+        if (isset($item->type['name']) && in_array($item->type['name'], array('array', 'ArrayCollection'))) {
+            if (isset($item->type['params'][1]['name'])) {
+                // E.g. array<string, MyNamespaceMyObject>
+                return $item->type['params'][1]['name'];
+            }
+            if (isset($item->type['params'][0]['name'])) {
+                // E.g. array<MyNamespaceMyObject>
+                return $item->type['params'][0]['name'];
+            }
         }
 
         return null;
@@ -178,7 +224,6 @@ class JmsMetadataParser implements ParserInterface
             $extracted = $this->commentExtractor->getDocCommentText($ref->getProperty($item->name));
         }
 
-        return !empty($extracted) ? $extracted : "No description.";
+        return $extracted;
     }
-
 }

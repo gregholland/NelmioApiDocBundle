@@ -57,6 +57,13 @@ class ApiDoc
     private $description = null;
 
     /**
+     * Section to group actions together.
+     *
+     * @var string
+     */
+    private $section = null;
+
+    /**
      * Extended documentation.
      *
      * @var string
@@ -72,6 +79,11 @@ class ApiDoc
      * @var string
      */
     private $method;
+
+    /**
+     * @var string
+     */
+    private $host;
 
     /**
      * @var string
@@ -92,6 +104,21 @@ class ApiDoc
      * @var boolean
      */
     private $https = false;
+
+    /**
+     * @var boolean
+     */
+    private $authentication = false;
+
+    /**
+     * @var int
+     */
+    private $cache;
+
+    /**
+     * @var boolean
+     */
+    private $deprecated = false;
 
     /**
      * @var array
@@ -126,7 +153,25 @@ class ApiDoc
         }
 
         if (isset($data['statusCodes'])) {
-            $this->statusCodes = $data['statusCodes'];
+            foreach ($data['statusCodes'] as $statusCode => $description) {
+                $this->addStatusCode($statusCode, $description);
+            }
+        }
+
+        if (isset($data['authentication'])) {
+            $this->setAuthentication((bool) $data['authentication']);
+        }
+
+        if (isset($data['cache'])) {
+            $this->setCache($data['cache']);
+        }
+
+        if (isset($data['section'])) {
+            $this->section = $data['section'];
+        }
+
+        if (isset($data['deprecated'])) {
+            $this->deprecated = $data['deprecated'];
         }
     }
 
@@ -137,6 +182,15 @@ class ApiDoc
     public function addFilter($name, array $filter)
     {
         $this->filters[$name] = $filter;
+    }
+
+    /**
+     * @param string $statusCode
+     * @param mixed  $description
+     */
+    public function addStatusCode($statusCode, $description)
+    {
+        $this->statusCodes[$statusCode] = !is_array($description) ? array($description) : $description;
     }
 
     /**
@@ -189,6 +243,22 @@ class ApiDoc
     }
 
     /**
+     * @param string $section
+     */
+    public function setSection($section)
+    {
+        $this->section = $section;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSection()
+    {
+        return $this->section;
+    }
+
+    /**
      * @param string $documentation
      */
     public function setDocumentation($documentation)
@@ -237,6 +307,13 @@ class ApiDoc
     public function setRoute(Route $route)
     {
         $this->route  = $route;
+
+        if (method_exists($route, 'getHost')) {
+            $this->host = $route->getHost() ? : null;
+        } else {
+            $this->host = null;
+        }
+
         $this->uri    = $route->getPattern();
         $this->method = $route->getRequirement('_method') ?: 'ANY';
     }
@@ -247,6 +324,22 @@ class ApiDoc
     public function getRoute()
     {
         return $this->route;
+    }
+
+    /**
+     * @return string
+     */
+    public function getHost()
+    {
+        return $this->host;
+    }
+
+    /**
+     * @param string $host
+     */
+    public function setHost($host)
+    {
+        $this->host = $host;
     }
 
     /**
@@ -266,6 +359,71 @@ class ApiDoc
     }
 
     /**
+     * @return boolean
+     */
+    public function getAuthentication()
+    {
+        return $this->authentication;
+    }
+
+    /**
+     * @param boolean $authentication
+     */
+    public function setAuthentication($authentication)
+    {
+        $this->authentication = $authentication;
+    }
+
+    /**
+     * @return int
+     */
+    public function getCache()
+    {
+        return $this->cache;
+    }
+
+    /**
+     * @param int $cache
+     */
+    public function setCache($cache)
+    {
+        $this->cache = (int) $cache;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getDeprecated()
+    {
+        return $this->deprecated;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFilters()
+    {
+        return $this->filters;
+    }
+
+    /**
+     * @return array
+     */
+    public function getRequirements()
+    {
+        return $this->requirements;
+    }
+
+    /**
+     * @param boolean $deprecated
+     */
+    public function setDeprecated($deprecated)
+    {
+        $this->deprecated = (bool) $deprecated;
+        return $this;
+    }
+
+    /**
      * @return array
      */
     public function toArray()
@@ -274,6 +432,10 @@ class ApiDoc
             'method' => $this->method,
             'uri'    => $this->uri,
         );
+
+        if ($host = $this->host) {
+            $data['host'] = $host;
+        }
 
         if ($description = $this->description) {
             $data['description'] = $description;
@@ -303,7 +465,17 @@ class ApiDoc
             $data['statusCodes'] = $statusCodes;
         }
 
+        if ($section = $this->section) {
+            $data['section'] = $section;
+        }
+
+        if ($cache = $this->cache) {
+            $data['cache'] = $cache;
+        }
+
         $data['https'] = $this->https;
+        $data['authentication'] = $this->authentication;
+        $data['deprecated'] = $this->deprecated;
 
         return $data;
     }
